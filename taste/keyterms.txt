@@ -1,0 +1,2 @@
+# One name per line: you, your business, the people and products you say on camera.
+# The transcriber spells these right. Lines starting with # are ignored.

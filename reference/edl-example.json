@@ -1,0 +1,14 @@
+{
+  "format": "vertical",
+  "fit": "crop",
+  "framing": {"x": 0.5, "y": 0.4},
+  "speed": 1.0,
+  "segments": [
+    {"in": 3.2, "out": 18.9},
+    {"in": 24.0, "out": 51.5},
+    {"in": 60.1, "out": 72.0, "speed": 1.1}
+  ],
+  "captions": {"on": true, "words_per_line": 3, "size_pct": 5.5, "y_pct": 70, "uppercase": false, "highlight": "FFD400", "hide_fillers": true},
+  "loudness_lufs": -14,
+  "music": {"file": "taste/music/bed.m4a", "db": -34}
+}

@@ -1,0 +1,102 @@
+{
+  "sample_seconds": 20,
+  "choices": [
+    {
+      "dimension": "pace",
+      "question": "How tight?",
+      "options": [
+        {
+          "label": "A",
+          "name": "your usual",
+          "why": "long pauses trimmed, ums kept",
+          "set": {}
+        },
+        {
+          "label": "B",
+          "name": "tight",
+          "why": "ums cut, pauses to 0.3s",
+          "set": {
+            "segments": [
+              {
+                "in": 3.2,
+                "out": 9.8
+              },
+              {
+                "in": 10.4,
+                "out": 18.9
+              },
+              {
+                "in": 24.0,
+                "out": 51.5
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "dimension": "opening",
+      "question": "Which first sentence?",
+      "options": [
+        {
+          "label": "C",
+          "name": "as recorded",
+          "why": "starts at 0:03",
+          "set": {}
+        },
+        {
+          "label": "D",
+          "name": "the punchline first",
+          "why": "starts at 0:41",
+          "set": {
+            "segments": [
+              {
+                "in": 41.0,
+                "out": 51.5
+              },
+              {
+                "in": 3.2,
+                "out": 18.9
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "dimension": "captions",
+      "question": "Caption style?",
+      "options": [
+        {
+          "label": "E",
+          "name": "white, 3 words",
+          "set": {
+            "captions": {
+              "on": true
+            }
+          }
+        },
+        {
+          "label": "F",
+          "name": "yellow last word",
+          "set": {
+            "captions": {
+              "highlight": "FFD400",
+              "uppercase": true
+            }
+          }
+        },
+        {
+          "label": "G",
+          "name": "no captions",
+          "set": {
+            "captions": {
+              "on": false
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "_note": "segments are lists of {\"in\": seconds, \"out\": seconds} in the ORIGINAL video; the session writes them from the transcript"
+}
