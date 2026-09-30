@@ -30,7 +30,7 @@ If it passes, tell me in 1 line. If it fails, fix it before moving on.
 
 PART 6. MY PHONE
 1. Tell me to install the Google Drive app, sign in with the same Google account, open Video Inbox, tap +, Upload, and pick any video from Photos, any length. Keep the app open until the upload finishes.
-2. Tell me to start a NEW session here in the Code tab with the Video environment and this same repository (https://github.com/amplify-legal/video-studio, or my own copy of it if I made one), and send: Edit my newest video.
+2. Tell me to start a NEW session here in the Code tab with the Video environment and this same repository (https://github.com/amplify-legal/video-studio), and send: Edit my newest video.
    (It needs the new session to use my saved settings.)
 
 PART 7. AFTER THAT
