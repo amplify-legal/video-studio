@@ -225,6 +225,46 @@ def cmd_connect(a) -> None:
         "Copy the WHOLE address from the address bar of that page and paste it here.")
 
 
+def cmd_folders(a) -> None:
+    """Creates the 2 Drive folders and reports free space, so nobody has to make them by hand."""
+    need("rclone")
+    for f in (INBOX, OUTBOX):
+        run(["rclone", "mkdir", f"{REMOTE}{f}"])
+    say(f"folders ready in Google Drive: {INBOX}, {OUTBOX}")
+    p = subprocess.run(["rclone", "about", REMOTE, "--json"], capture_output=True, text=True)
+    try:
+        info = json.loads(p.stdout)
+        free = info.get("free")
+        if free is not None:
+            say(f"free space: {free / 1e9:.1f} GB" + ("  (a 20 GB video needs a bigger Google plan)" if free < 25e9 else ""))
+    except Exception:
+        pass
+
+
+def cmd_settings(a) -> None:
+    """Prints the one block a person pastes into their environment's variables box, so they paste
+    once instead of 5 times. Uses the Drive token saved by `connect` in this session."""
+    conf = Path.home() / ".config" / "rclone" / "rclone.conf"
+    tok = None
+    if conf.exists():
+        for line in conf.read_text().splitlines():
+            if line.startswith("token = "):
+                tok = line[len("token = "):].strip()
+    if not tok:
+        die("Drive is not connected in this session yet. Run `vidkit.py connect` first.")
+    lines = ["RCLONE_CONFIG_GDRIVE_TYPE=drive", "RCLONE_CONFIG_GDRIVE_SCOPE=drive",
+             f"RCLONE_CONFIG_GDRIVE_TOKEN={tok}", "BASH_DEFAULT_TIMEOUT_MS=600000"]
+    if a.elevenlabs:
+        lines.append(f"ELEVENLABS_API_KEY={a.elevenlabs.strip()}")
+    if a.deepgram:
+        lines.append(f"DEEPGRAM_API_KEY={a.deepgram.strip()}")
+    say("Copy everything between the 2 lines and paste it into the environment's variables box. "
+        "It contains passwords: paste it only there.")
+    say("-" * 40)
+    say("\n".join(lines))
+    say("-" * 40)
+
+
 # ----------------------------------------------------------------------------- mount / find
 
 def cmd_mount(a) -> None:
@@ -1123,6 +1163,9 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("connect", help="connect Google Drive from a phone")
     p.add_argument("--finish", help="the address from the error page after tapping Allow"); p.set_defaults(fn=cmd_connect)
+    sub.add_parser("folders", help="create the Drive folders").set_defaults(fn=cmd_folders)
+    p = sub.add_parser("settings", help="print the one block of environment variables to paste")
+    p.add_argument("--elevenlabs"); p.add_argument("--deepgram"); p.set_defaults(fn=cmd_settings)
     sub.add_parser("mount").set_defaults(fn=cmd_mount)
     p = sub.add_parser("find"); p.add_argument("--folder"); p.add_argument("-n", type=int, default=10); p.set_defaults(fn=cmd_find)
     p = sub.add_parser("probe"); p.add_argument("source"); p.add_argument("--job", required=True)

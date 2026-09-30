@@ -12,7 +12,8 @@ This repository edits phone videos from the Claude app. It holds the editor and 
 
 1. `python3 tools/vidkit.py connect`. Give the person the Google link it prints, and say in plain words: open it, pick the Google account with your videos, tap Allow; the next page will show an error, which is expected; copy the whole address from the top of that page and paste it here.
 2. When they paste it: `python3 tools/vidkit.py connect --finish "<what they pasted>"`. Drive now works in this session.
-3. Tell them, step by step, to save the token for future sessions: on https://claude.ai/code, tap the environment's name above the message box, edit their environment, and add 3 environment variables: `RCLONE_CONFIG_GDRIVE_TYPE` = `drive`, `RCLONE_CONFIG_GDRIVE_SCOPE` = `drive`, `RCLONE_CONFIG_GDRIVE_TOKEN` = the block the command printed. Say plainly that the block is a password for their Drive and goes only in that box.
+3. `python3 tools/vidkit.py folders` creates their Video Inbox and Video Edits folders.
+4. To save it for future sessions: `python3 tools/vidkit.py settings --elevenlabs "<their key>"` prints 1 block. Walk them, one step at a time, through https://claude.ai/code in Safari: tap the environment's name above the message box, add an environment named Video, Network access Full, paste the block into Environment variables, save. Say plainly the block holds passwords and goes only in that box. A new session on the Video environment picks it up.
 
 ## Editing
 
