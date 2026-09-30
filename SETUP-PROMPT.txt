@@ -1,0 +1,48 @@
+Be my setup guide. I want to edit my phone videos with Claude, from my iPhone. I'm not technical. Walk me through the steps below ONE AT A TIME: give me only the current step in short, plain words, then wait until I say "done" before the next one. If I get stuck or a screen looks different, ask me what I see and help me from there. Never ask me to paste a key or password into this chat.
+
+When a step has a block of text for me to paste somewhere, show it on its own in a code block so I can copy it with one tap.
+
+STEP 1. Google Drive folders (Google Drive app).
+Tap +, then Folder, and make 2 folders named exactly: Video Inbox  and  Video Edits
+Then upload a short test video into Video Inbox (+, Upload, pick it from Photos). For long videos, keep the Drive app open on wifi until the upload finishes.
+
+STEP 2. A key for the words (Safari).
+Go to https://elevenlabs.io and sign up. In the profile menu, open API keys, create a key and copy it. It is a password: it goes only into step 3.
+
+STEP 3. The video workspace (Safari, not the app: the app does not have these settings).
+Go to https://claude.ai/code and sign in. If it asks to connect GitHub, help me make a free GitHub account and connect it.
+Above the message box, tap the cloud icon with the environment's name, add a new environment and name it Video. Then fill in 3 things and save:
+
+3a. Network access: choose Custom, keep the default list on, and put these in Allowed domains:
+api.elevenlabs.io
+api.deepgram.com
+
+3b. Environment variables (replace paste-your-key-here with my ElevenLabs key; if the screen wants a name and a value separately, the name is the part before the =):
+ELEVENLABS_API_KEY=paste-your-key-here
+BASH_DEFAULT_TIMEOUT_MS=600000
+
+3c. Setup script:
+#!/usr/bin/env bash
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
+$SUDO apt-get update -qq
+$SUDO apt-get install -y -qq --no-install-recommends ffmpeg rclone fontconfig fonts-dejavu-core >/dev/null
+$SUDO apt-get install -y -qq --no-install-recommends fonts-inter >/dev/null 2>&1 || true
+ffmpeg -version | head -1
+rclone version | head -1
+echo "setup done"
+
+STEP 4. Connect my Drive (Claude app, Code tab).
+Start a new session using the Video environment and this repository:
+https://github.com/amplify-legal/video-studio
+Send this as the first message there:
+Set me up. Read CLAUDE.md, connect my Google Drive step by step, then run the self-test and tell me if it passed. I'm not technical, so keep it simple.
+That session will send me a Google link: I open it, pick the account with my videos and tap Allow. The next page shows an error saying it can't connect, which is expected: I copy the whole address from the top of that page and paste it back into that session. It then gives me a long block to save in the Video environment on https://claude.ai/code, which lets future sessions see my Drive. Setup is finished when it says the self-test passed.
+
+STEP 5. Every video after that.
+Upload the video into Video Inbox. In the Claude app, Code tab, start a session with the Video environment and the same repository, and say something like:
+Edit my newest video. It's for Instagram, keep it under a minute.
+Short labelled samples show up in Video Edits; I watch them in the Drive app and answer with the letters, like "B and D, captions a bit smaller". The finished video lands in Video Edits. Nothing is ever posted for me. If it says it paused on a big video, I reply "carry on".
+
+Start with step 1 now.

@@ -5,3 +5,5 @@ Edit phone videos from the Claude app. Film, drop the video in a Google Drive fo
 This repository holds only the editor (`tools/vidkit.py`) and Claude's instructions (`CLAUDE.md`, `.claude/skills/phone-edit/`). Your videos, your preferences and your Drive connection stay in your own Google Drive and your own Claude environment; nothing personal is ever written here.
 
 Setup takes about 40 minutes on a phone, once. Start a Claude cloud session on this repository and say "Set me up. Read CLAUDE.md."
+
+Easiest start: copy all of [SETUP-PROMPT.txt](SETUP-PROMPT.txt) into a normal Claude chat on your phone. It walks you through every step.
