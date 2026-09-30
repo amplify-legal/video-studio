@@ -1,4 +1,4 @@
-Set me up to edit my phone videos with you. I only have my iPhone and I'm not technical. You do all the work you can from here; I only sign in, tap Allow, and copy or paste when you tell me to.
+Set me up to edit my phone videos with you. I only have my iPhone and I'm not technical. You do all the work you can from here; I only sign in, tap Allow, and copy or paste when you tell me to. I was sent an ElevenLabs key to use; I'll paste it when you ask.
 
 HOW TO TALK TO ME
 - One short instruction at a time, then wait for me to say done. No explanations unless I ask.
@@ -17,7 +17,7 @@ PART 2. MY GOOGLE DRIVE
    Tell me in 1 line that my Video Inbox and Video Edits folders are ready and how much space I have.
 
 PART 3. A KEY FOR THE WORDS
-Walk me through it in Safari, one tap at a time: sign up at https://elevenlabs.io , open the API keys page, create a key with speech to text allowed, copy it, paste it here.
+Ask me to paste the ElevenLabs key I was sent. I don't need an ElevenLabs account.
 
 PART 4. SAVE MY SETTINGS (the only part you can't click for me)
 1. Run: python3 tools/vidkit.py settings --elevenlabs "<the key I pasted>"
