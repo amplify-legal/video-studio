@@ -580,6 +580,42 @@ def cmd_sheet(a) -> None:
     say(f"contact sheets every {every}s: {out}  (read them as images before planning the cut)")
 
 
+# ----------------------------------------------------------------------------- scenes
+
+def cmd_scenes(a) -> None:
+    """Finds where the picture changes (the camera moves, a new shot starts, the person walks
+    off) on the working copy. Cuts can then land between moments, not only between words."""
+    J = job_dir(a.job)
+    src = J / "proxy.mp4"
+    if not src.exists():
+        die("run proxy first")
+    thr = a.threshold or (jload(TASTE_DIR / "edit-defaults.json", {}) or {}).get("scene_threshold", 0.3)
+    p = subprocess.run(["ffmpeg", "-hide_banner", "-nostdin", "-i", str(src), "-an", "-vf",
+                        f"select='gt(scene,{thr})',metadata=print", "-f", "null", "-"],
+                       capture_output=True, text=True)
+    cuts, t = [], None
+    for line in p.stderr.splitlines():
+        if "pts_time:" in line:
+            t = float(line.split("pts_time:")[1].split()[0])
+        elif "lavfi.scene_score=" in line and t is not None:
+            cuts.append({"t": round(t, 3), "score": round(float(line.split("=")[1]), 3)})
+            t = None
+    jsave(J / "scenes.json", {"threshold": thr, "changes": cuts})
+    say(f"{len(cuts)} picture changes found (threshold {thr}) -> {J / 'scenes.json'}")
+    for c in cuts[:30]:
+        say(f"  {fmt_t(c['t'])}  score {c['score']}")
+
+
+def _snap(t: float, points: list[float], words: list[dict], reach: float) -> float:
+    """Moves a cut to the nearest picture change within `reach` seconds, unless that lands inside a word."""
+    best = min(points, key=lambda p: abs(p - t), default=None)
+    if best is None or abs(best - t) > reach:
+        return t
+    if any(w["start"] < best < w["end"] for w in words):
+        return t
+    return best
+
+
 # ----------------------------------------------------------------------------- captions
 
 def ass_time(s: float) -> str:
@@ -714,8 +750,16 @@ def cmd_tighten(a) -> None:
             cur["out"] = min(s["out"], prev["end"] + keep / 2)
             pieces.append(cur)
     # a piece is dropped only when it carries no real word at all and is shorter than --min
+    snap = a.snap or prefs.get("cut_on", "words")
+    if snap == "scenes":
+        sc = [c["t"] for c in (jload(J / "scenes.json") or {}).get("changes", [])]
+        if not sc:
+            say("  no scenes.json yet (run `scenes`), so cuts stay on the words")
+        reach = prefs.get("scene_reach", 0.6)
+        for p in pieces:
+            p["in"], p["out"] = _snap(p["in"], sc, words, reach), _snap(p["out"], sc, words, reach)
     out = [{k: (round(v, 3) if isinstance(v, float) else v) for k, v in p.items() if k != "n"}
-           for p in pieces if p["n"] >= 1 or p["out"] - p["in"] >= mn]
+           for p in pieces if p["out"] > p["in"] and (p["n"] >= 1 or p["out"] - p["in"] >= mn)]
     before, e["segments"] = out_duration(e), out
     jsave(Path(a.out), e)
     say(f"tightened: {fmt_t(before)} -> {fmt_t(out_duration(e))}, {len(out)} pieces "
@@ -1075,6 +1119,58 @@ def cmd_learn(a) -> None:
         say(f"recorded {a.kind}: {a.dimension} = {a.choice}")
         return
     rows = [json.loads(l) for l in log.read_text().splitlines() if l.strip()] if log.exists() else []
+    qfile = TASTE_DIR / "questions.json"
+    if a.action == "observe":
+        if not a.words:
+            die("observe needs --words: what you noticed about how they film or edit, in plain words")
+        obs = TASTE_DIR / "observations.md"
+        if not obs.exists():
+            obs.write_text("# How I film (noticed by Claude, not rules)\n\nEach line is something a session noticed. "
+                           "Guidelines until I confirm them.\n\n")
+        with obs.open("a") as f:
+            f.write(f"- {now()[:10]} · {a.dimension or 'general'} · {a.words}\n")
+        say("noted in taste/observations.md")
+        return
+    if a.action in ("next-question", "answer"):
+        qs = jload(qfile, [])
+        if a.action == "answer":
+            q = next((x for x in qs if x["id"] == a.qid), None) or die(f"no question {a.qid}")
+            q.update(status="answered", answered_at=now(), answer=a.words or "")
+            jsave(qfile, qs)
+            with log.open("a") as f:
+                f.write(json.dumps({"at": now(), "kind": "correction", "dimension": q["dimension"],
+                                    "choice": "answer", "words": a.words or ""}) + "\n")
+            say(f"recorded. Now write it into edit-preferences.md, in their words, dated.")
+            return
+        recent = [x for x in qs if x.get("asked_at") and x["asked_at"] >= (
+            _dt.datetime.now().astimezone() - _dt.timedelta(hours=20)).isoformat()]
+        if recent:
+            say("NONE: a question was already asked in the last 20 hours. Ask nothing.")
+            return
+        prefs_text = (TASTE_DIR / "edit-preferences.md").read_text().lower() if (TASTE_DIR / "edit-preferences.md").exists() else ""
+        settled = {r["dimension"] for r in rows if r.get("kind") == "accepted"}
+        picks = {}
+        for r in rows:
+            if r.get("kind", "pick") == "pick":
+                picks[r["dimension"]] = picks.get(r["dimension"], 0) + 1
+        for q in sorted(qs, key=lambda x: x["rank"]):
+            if q.get("status") != "open":
+                continue
+            if q["dimension"] in settled or f"· {q['dimension']} ·" in prefs_text:
+                q["status"] = "answered-by-picks"; continue
+            if picks.get(q["dimension"], 0) >= 3:
+                q["status"] = "answered-by-picks"; continue     # their picks already say it
+            if q.get("after_videos", 1) > len({r.get("job") for r in rows if r.get("job")}):
+                continue                                       # too early for this one
+            if a.mark:
+                q["asked_at"] = now()
+            jsave(qfile, qs)
+            say(f"ASK ({q['id']}): {q['question']}")
+            say(f"  why it matters: {q['why']}")
+            return
+        jsave(qfile, qs)
+        say("NONE: nothing worth asking right now.")
+        return
     if a.action == "show":
         prefs = TASTE_DIR / "edit-preferences.md"
         say(prefs.read_text() if prefs.exists() else "(no edit-preferences.md yet)")
@@ -1177,7 +1273,10 @@ def main() -> None:
     p = sub.add_parser("tighten"); p.add_argument("--job", required=True); p.add_argument("--edl", required=True)
     p.add_argument("--out", required=True); p.add_argument("--gap", type=float); p.add_argument("--keep", type=float)
     p.add_argument("--min", type=float); p.add_argument("--drop-fillers", action="store_true")
+    p.add_argument("--snap", choices=["words", "scenes"], help="where cuts land; default from the taste file")
     p.set_defaults(fn=cmd_tighten)
+    p = sub.add_parser("scenes"); p.add_argument("--job", required=True); p.add_argument("--threshold", type=float)
+    p.set_defaults(fn=cmd_scenes)
     p = sub.add_parser("samples"); p.add_argument("--job", required=True); p.add_argument("--options", required=True)
     p.add_argument("--max-minutes", type=float, default=8); p.add_argument("--full", action="store_true",
                    help="sample from the original instead of the proxy (slower, exact colour)"); p.set_defaults(fn=cmd_samples)
@@ -1186,7 +1285,8 @@ def main() -> None:
     p.add_argument("--preset", default="medium"); p.add_argument("--no-pick-needed", action="store_true"); p.set_defaults(fn=cmd_render)
     p = sub.add_parser("verify"); p.add_argument("--job", required=True); p.add_argument("--edl"); p.set_defaults(fn=cmd_verify)
     p = sub.add_parser("deliver"); p.add_argument("--job", required=True); p.add_argument("--options", action="store_true"); p.set_defaults(fn=cmd_deliver)
-    p = sub.add_parser("learn"); p.add_argument("action", choices=["pull", "record", "show", "propose", "push"])
+    p = sub.add_parser("learn"); p.add_argument("action", choices=["pull", "record", "show", "propose", "push", "observe", "next-question", "answer"])
+    p.add_argument("--qid"); p.add_argument("--mark", action="store_true", help="with next-question: record that it was asked")
     p.add_argument("--job"); p.add_argument("--kind", choices=["pick", "correction", "accepted", "declined"], default="pick")
     p.add_argument("--dimension"); p.add_argument("--choice"); p.add_argument("--offered"); p.add_argument("--words")
     p.set_defaults(fn=cmd_learn)

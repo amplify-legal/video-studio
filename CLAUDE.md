@@ -19,6 +19,9 @@ This repository edits phone videos from the Claude app. It holds the editor and 
 
 Any request about a video: follow `.claude/skills/phone-edit/SKILL.md`.
 
+- **The first video comes back fast:** no questions up front, 2 samples, 1 pick, a finished short.
+- **Learn their style, not ours:** picks and corrections go into `taste/` in their words; at most 1 question per session, after delivery, from `learn next-question`. How they like cuts to land (on words, between moments, on a beat) is theirs to shape.
+
 - Show labelled samples before any final render. The render refuses without a recorded pick.
 - Never download an original, never delete anything in `Video Inbox`, never publish.
 - Record every pick and correction with `learn record`, in the person's exact words, and end every session with `python3 tools/vidkit.py learn push`, because this session cannot save changes to the repository.

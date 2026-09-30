@@ -1,30 +1,26 @@
-# How it gets better
+# How it learns your way of editing
 
-3 files, all in `taste/`, all saved to your Drive at `Video Edits/_taste` at the end of every session and read back at the start of the next.
+It learns the way a good editor learns a new client: by watching what you pick, writing down what you correct, and asking 1 good question at a time, never a questionnaire.
 
-| File | Who writes it | What is in it |
+## What it keeps, all in your Google Drive (`Video Edits/_taste`)
+
+| File | What is in it | Who writes it |
 |---|---|---|
-| `edit-log.jsonl` | The session, every pick and every correction | Date, the choice, what else was offered, and your exact words |
-| `edit-preferences.md` | You, or the session on your yes | Your defaults and your rules, in your words, dated |
-| `edit-defaults.json` | The session, on your yes | The numbers behind a default: pause lengths, caption size, music level |
+| `edit-preferences.md` | Your defaults and rules, in your own words, dated. The newest line wins. | You, or Claude on your yes |
+| `edit-log.jsonl` | Every pick and correction: what was offered, what you chose, your exact words | Claude, every video |
+| `observations.md` | What Claude noticed about how you film: how you start, restart, move, where the energy is | Claude, 1 or 2 lines per video |
+| `questions.json` | The questions still worth asking, ranked by how much the answer would change your edits | Claude marks them asked or answered |
+| `edit-defaults.json` | The numbers behind your defaults: pause length, where cuts land, caption size | Claude, on your yes |
 
-## The ladder
+## The rules it follows
 
-1. **A pick** is used for that video and logged. Nothing else changes.
-2. **The same pick 3 times, on at least 2 different days,** becomes a proposal. `vidkit.py learn propose` does the counting over your last 5 picks on that choice. Corrections are rules straight away (step 5) and never counted as picks.
-3. **You say yes,** and it becomes a default. From then on it is applied and not offered.
-4. **You say no,** and that is written down too, so it is not proposed again for 30 days.
-5. **A correction in your own words** ("captions smaller", "never start on 'so'") is written into `edit-preferences.md` the same session, quoted and dated. A correction is a rule the moment you say it; it does not need 3 days.
-
-Why 3 picks on 2 days: one day's picks can all come from the same mood or the same video. The same answer on different days is a taste.
-
-## What changes as it learns
-
-- **Week 1:** 3 questions and 3 rounds of samples per video.
-- **Once the defaults settle:** usually no questions, one round with 1 or 2 genuinely open choices, and the first sample often already right.
-
-That is what we expect from how the ladder works, not something we have measured over weeks. Your log will show it: "See what it has learned" in `INSTALL-PROMPT.md` prints your defaults and what is still open.
+1. **Your first video comes back fast.** No interview. 2 samples, 1 pick, a finished short.
+2. **A correction is a rule immediately.** Say "captions smaller" once and it is written down, in your words, before the session ends.
+3. **A pick is only a hint.** The same pick 3 times on 2 different days becomes a proposal, and it only becomes a default when you say yes. A no is not asked again for 30 days.
+4. **1 question at most, after the video is delivered, never before.** Never more than 1 a day. Questions your picks already answered are skipped, and the deeper ones (what makes a video feel like yours) wait until you have made a few.
+5. **Where cuts land is your call.** Tight on your words, at natural moments when the picture changes, or on the beat of a laugh or a gesture. It starts on the words, notices what you keep and cut, and asks once you have made enough videos for the answer to mean something.
+6. **Your style, not a template.** The defaults are a starting point. Nothing from anybody else's taste is copied into yours.
 
 ## Changing your mind
 
-Edit `edit-preferences.md` in the Drive app, or tell a session "from now on...". Your newest words win over anything older, including a default.
+Tell any session "from now on..." or edit `edit-preferences.md` in the Drive app. Your newest words beat everything older, including a default.

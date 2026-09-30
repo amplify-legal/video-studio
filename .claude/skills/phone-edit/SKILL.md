@@ -1,148 +1,150 @@
 ---
 name: phone-edit
-description: Edit a video recorded on a phone, from the Claude mobile app, inside a Claude Code cloud session. Reads the file in place on Google Drive (up to 20 GB), builds a small working copy in resumable chunks, transcribes it, shows labelled samples for every open choice, renders full quality only after the person picks, checks the file, and puts it back in Drive. Every pick and correction is logged so the next edit asks less. Triggers - "edit my video", "edit the video I just uploaded", "cut this for Instagram", "make a short from my latest clip", "carry on with the edit", "B and D", a pick of labelled options. NOT for publishing anything.
+description: Edit a video recorded on a phone, from the Claude mobile app, inside a Claude Code cloud session. Reads the file in place on Google Drive (up to 20 GB), builds a small working copy in resumable pieces, transcribes it, finds where the picture changes, shows labelled samples, renders full quality only after a pick, checks the file, puts it back in Drive, and learns the person's own way of editing over time. Triggers - "edit my video", "edit my newest video", "make a short", "cut this for Instagram", "carry on", "B and D", a pick of labelled options, "from now on...". NOT for publishing anything.
 ---
 
 # Phone edit
 
-The person is on a phone. Keep every message short, put the choices as labels, and never make them open something you could say in one line.
+The person is on a phone and may not be technical. Short messages, plain words, labels to pick from. Every command is `python3 tools/vidkit.py ...`; a job folder is `/tmp/jobs/<date>-<short-name>`, called `J` below.
 
-Every command below is `python3 tools/vidkit.py ...`. A job folder is `/tmp/jobs/<date>-<short-name>`; call it `J`.
+## The 2 things that matter most
 
-## 0. Before the first question
+1. **Speed to a finished video.** Their first video should come back as a finished short as fast as the machine allows, with 1 round of samples and no interview. Questions come later, 1 at a time.
+2. **Their style, not ours.** Every person films differently and has their own idea of where a cut belongs. Defaults here are a starting point. What they pick, what they correct and what they say wins, and it is written down so the next session starts from it.
+
+## 0. Before anything
 
 ```bash
-python3 tools/vidkit.py learn pull      # their taste, from Drive
-python3 tools/vidkit.py mount           # a read-only window onto Drive; nothing downloads
+bash tools/setup.sh                        # only if ffmpeg or rclone is missing
+python3 tools/vidkit.py learn pull         # their taste, from their Drive
+python3 tools/vidkit.py mount
 python3 tools/vidkit.py find
 ```
 
-Read `taste/edit-preferences.md` and `taste/machine.md` in full. Anything a preference answers is not a question today.
+Read everything in `taste/`: `edit-preferences.md` (their words, the newest line wins), `observations.md` (what earlier sessions noticed), `edit-defaults.json` (numbers). Never ask what these already answer. If `find` shows several new videos and they didn't say which, list them (name, time, size) and let them pick.
 
-If `find` lists more than one new video and they did not say which, ask with the names, times and sizes as options. Never guess.
+## 1. First video ever (no `edit-log.jsonl` yet): the fast path
 
-## 1. What the phone recorded
+- **Ask nothing up front.** Assume a vertical short for Instagram or TikTok, under 60 seconds, captions on, unless their message said otherwise.
+- Run steps 2 to 4, then find the strongest 30 to 60 seconds: a complete thought with a clear start, ideally the moment with the most energy or the clearest point.
+- **1 round, 2 samples, 1 choice:** A is that moment tightened; B is a second strong moment, or the same moment starting on a different first sentence. 12 to 20 seconds each.
+- On their pick, render, verify, deliver. Then ask the 1 question from step 9.
+
+## 2. What the phone recorded, and the working copy
 
 ```bash
 python3 tools/vidkit.py probe "Video Inbox/<file>" --job J
+python3 tools/vidkit.py proxy --job J      # run again until it prints "proxy ready"
 ```
 
-Tell them in 2 lines: length, size, and roughly how long the first pass takes on their machine (`taste/machine.md` has their seconds per second of 4K; 1080p is about a quarter of that). HDR, rotation and a wobbling frame rate are fixed automatically; mention them only if asked. `reference/phone-footage.md` explains each.
+Tell them the length and roughly how long the first pass takes (`taste/machine.md` if it exists), in 1 line. Everything else the probe finds (HDR, rotation, frame rate) is fixed automatically; mention it only if asked. The proxy works in pieces and pauses itself near the time limit; every run finishes at least 1 piece.
 
-## 2. The working copy
-
-```bash
-python3 tools/vidkit.py proxy --job J
-```
-
-It works in pieces (1 minute for 4K, 2 minutes otherwise) and stops itself before the command time limit (exit code 3, `PAUSED`). **Run it again until it prints `proxy ready`.** Every run finishes at least 1 piece, so it always moves forward. When it finishes it prints this machine's cost per second of footage; if `taste/machine.md` has no line for this resolution yet, add one. Run it in the background when the tool offers, and post one progress line per run, not per piece. A session that went idle and comes back just runs it again; finished pieces are kept.
-
-## 3. The words
-
-A video with no sound skips this step and stays uncaptioned.
+## 3. Words and picture changes
 
 ```bash
 python3 tools/vidkit.py transcribe --job J
-```
-
-Names in `taste/keyterms.txt` are spelled right; add any new name they mention before running. The engine used is written into `J/transcript.txt` line 1.
-
-## 4. Look before you plan
-
-```bash
+python3 tools/vidkit.py scenes --job J
 python3 tools/vidkit.py sheet --job J
 ```
 
-Read the contact sheets as images and read `J/transcript.txt` start to finish. You are looking for: where the real start is (people clear their throat, check the camera, say "okay"), the strongest moment, false starts and retakes, anyone else's face or name on screen, and anything private in the background.
+Read the contact sheets as images, `J/transcript.txt` start to finish, and `J/scenes.json`. A video with no sound skips transcribe.
 
-## 5. Ask only what is open
+## 4. Where cuts land
 
-At most 3 questions, in one message, and only those the taste file does not answer. The usual ones:
+Words are only one signal. A cut can land:
+- **on the words:** between sentences, after a pause (`tighten`, the default)
+- **between moments:** where the picture changes: they move, look away, walk off, the shot changes (`tighten --snap scenes`)
+- **on the beat of the delivery:** after a laugh, a gesture, a reaction the transcript cannot see (you find these on the contact sheets)
 
-- **Where is it going?** (sets the format: vertical, horizontal, square)
-- **How long?** (a target, or "as long as it needs")
-- **Anything to cut or keep?**
-
-If the taste file answers all 3, ask nothing and go straight to samples.
-
-## 6. The edit list and the options
-
-Write `J/edl.json` (see `reference/edl-example.json`): the segments to keep, in source seconds, plus format, framing, captions, loudness and music. Build the first pass from the transcript:
+Which one feels right is their creative call. Until the taste file says, use words, and when two cut points are close, prefer the one at a picture change. **Never cut inside a word**, and never land a cut where the transcript is clean but the picture jumps badly: look at the frames either side.
 
 ```bash
-python3 tools/vidkit.py tighten --job J --edl J/edl-raw.json --out J/edl.json [--drop-fillers]
+python3 tools/vidkit.py tighten --job J --edl J/edl-raw.json --out J/edl.json [--drop-fillers] [--snap scenes]
 ```
 
-Then write `J/options.json` (see `reference/options-example.json`). Rules:
+## 5. Options
 
-- **Only open choices become options.** A confirmed default is applied, not offered. An unconfirmed lean from the log is offered as option A with "your usual" in its name.
-- **At most 3 choices per round, 2 or 3 options each.** More than that on a phone is noise.
-- **Every option has a unique letter for the whole job** (A, B for pace; C, D for captions; E, F, G for the opening). Never reuse a letter within a job, even in round 2.
-- **2 options that would look the same are 1 option.** If you cannot say in 4 words how B differs from A, drop B.
-- **Opening choices are always a choice** when the start is not obvious: offer 2 or 3 different first sentences.
+Write `J/options.json` (see `reference/options-example.json`):
+- **Only open choices become options.** A confirmed default is applied, not offered. A lean from the log that is not confirmed yet is offered as A, named "your usual".
+- **First video:** 1 choice, 2 options. **Later:** up to 3 choices, 2 or 3 options each, and fewer as defaults settle.
+- **Every option has its own letter for the whole job**, never reused, and 2 options that look the same are 1 option.
 
 ```bash
 python3 tools/vidkit.py samples --job J --options J/options.json
 python3 tools/vidkit.py deliver --job J --options
 ```
 
-A `set` on an option changes only the settings it names; `"captions": {"highlight": "FFD400"}` keeps every other caption setting. Samples are 20 seconds, half size, from the working copy, with the label burned into the corner. Then send one message: the Drive folder (`Video Edits/<job>/options`), and one line per option, label first. Then stop and wait.
+Send 1 message: the Drive folder (`Video Edits/<job>/options`), then 1 line per option, letter first. Wait.
 
-## 7. Record the pick, in their words
-
-For every choice they answer, and every correction they add:
+## 6. Record the pick, in their words
 
 ```bash
-python3 tools/vidkit.py learn record --job J --dimension pace --choice "B tight" --offered "A natural,B tight" --words "<their exact words>"
-python3 tools/vidkit.py learn record --job J --kind correction --dimension captions --choice "smaller" --words "<their exact words>"
+python3 tools/vidkit.py learn record --job J --dimension <what the choice was about> --choice "<letter and name>" --offered "<the letters>" --words "<their exact words>"
 ```
 
-Their words go in verbatim, typos included. If they reject every option, record that too and make a round 2 with new letters.
+Use these names for `--dimension` so picks, questions and defaults line up: `format`, `length`, `opening`, `pace`, `cut_on`, `captions`, `music`, `framing`, `style`, `rules`, `keyterms`.
 
-## 8. The real render
+Every correction they add ("captions smaller", "start on the second sentence") is recorded with `--kind correction` AND written into `taste/edit-preferences.md` under Rules the same session, quoted and dated. A correction is a rule the moment they say it.
 
-Update `J/edl.json` with the picks, then:
-
-```bash
-python3 tools/vidkit.py render --job J --edl J/edl.json
-```
-
-It renders from the original, reading only the kept parts, in pieces, and pauses (exit 3) near the time limit like the proxy step. Run it again until it prints `rendered`.
-
-## 9. Check it, then look at it
+## 7. Render, check, look
 
 ```bash
+python3 tools/vidkit.py render --job J --edl J/edl.json    # run again until it prints "rendered"
 python3 tools/vidkit.py verify --job J
 ```
 
-12 mechanical checks, including every planned frame being there and picture and sound being the same length (loudness and dead air are skipped on a silent video). **Red means fix it and render again, never deliver.** Green is not done: pull 3 frames (start, middle, last second) with ffmpeg and look at them, and read the captions around every cut for a clipped or misspelled word. A fault any viewer would notice is yours to fix without asking.
+Red means fix and render again. Green is not done: look at 3 frames (start, middle, end) and read the captions around every cut. A fault anyone would notice is yours to fix without asking.
 
 ```bash
 python3 tools/vidkit.py deliver --job J
 ```
 
-Tell them in 1 line where it is in Drive and how long it is.
+Tell them in 1 line where it is and how long it is.
 
-## 10. Learn
+## 8. Notice how they film
+
+After every video, write 1 or 2 things you noticed that would change how the next one is edited: how they start, how they restart a sentence, whether they move, where the energy is, what they cut or kept against your guess.
+
+```bash
+python3 tools/vidkit.py learn observe --dimension <filming|pace|opening|cuts|...> --words "<what you noticed>"
+```
+
+These are guidelines, not rules. If the same thing shows up in 3 videos, say it back to them once, as a question, and let them confirm it into the taste file.
+
+## 9. 1 question, at most, after delivery
+
+```bash
+python3 tools/vidkit.py learn next-question --mark
+```
+
+If it prints `ASK`, ask exactly that question, after the finished video is delivered, never before. If it prints `NONE`, ask nothing. It never asks more than 1 a day, skips anything their picks already answered, and holds deeper questions until they have made a few videos. When they answer:
+
+```bash
+python3 tools/vidkit.py learn answer --qid <id> --words "<their exact words>"
+```
+
+then write the answer into `edit-preferences.md`, quoted and dated. If they ignore the question, drop it; it does not come back that day.
+
+## 10. Turn picks into defaults, then save
 
 ```bash
 python3 tools/vidkit.py learn propose
 ```
 
-If it proposes a default, ask once, with their own past words quoted: *"You've picked the tight pace 3 times this week ('cut the ums'). Make it the default?"* Record the answer with `learn record --kind accepted` (or `--kind declined`) and the same dimension and choice, so it is not asked again. On yes, write it into `taste/edit-preferences.md` under Defaults, dated, and put any number it sets (pause lengths, caption size, music level) into `taste/edit-defaults.json`. A no is not proposed again for 30 days.
+A default is proposed only after the same pick 3 times on 2 different days. Ask once, quoting their own past words. Record the answer with `learn record --kind accepted` or `--kind declined`; on yes, write it into `edit-preferences.md` under Defaults and any number into `edit-defaults.json` (for example `"cut_on": "scenes"`, `"pause_keep": 0.4`, `"drop_fillers": true`).
 
-Always finish with:
+**Always end with:**
 
 ```bash
 python3 tools/vidkit.py learn push
 ```
 
-That is the step that makes the next session smarter. The repository cannot carry it: a cloud session can only push to a side branch, so the taste lives on Drive.
+This session cannot save to the repository, so their taste lives in their Drive. Without this step, everything learned today is lost.
 
 ## Never
 
-- Render the final before a recorded pick (`render` refuses; do not use `--no-pick-needed` except to re-render something already picked).
-- Delete or overwrite anything in `Video Inbox`.
-- Download a big original to the machine. The window reads it in place; the disk is 30 GB.
-- Publish, post or share a link anywhere.
+- Render the final before a recorded pick.
+- Ask more than 1 taste question in a session, or any before their first video is delivered.
+- Copy someone else's style into theirs. The defaults are where they start, not where they should end up.
+- Delete or overwrite anything in `Video Inbox`. Download a big original. Publish anything.
 - Write an `rm` on a path built from a variable or a glob.
