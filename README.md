@@ -6,4 +6,4 @@ This repository holds only the editor (`tools/vidkit.py`) and Claude's instructi
 
 Setup takes about 40 minutes on a phone, once. Start a Claude cloud session on this repository and say "Set me up. Read CLAUDE.md."
 
-Easiest start: copy all of [SETUP-PROMPT.txt](SETUP-PROMPT.txt) into a normal Claude chat on your phone. It walks you through every step.
+Easiest start: on a computer, install the Claude in Chrome extension, open its side panel, and paste all of [SETUP-PROMPT.txt](SETUP-PROMPT.txt). Claude sets everything up in your Chrome; you only sign in.

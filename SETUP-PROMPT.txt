@@ -1,27 +1,32 @@
-Be my setup guide. I want to edit my phone videos with Claude, from my iPhone. I'm not technical. Walk me through the steps below ONE AT A TIME: give me only the current step in short, plain words, then wait until I say "done" before the next one. If I get stuck or a screen looks different, ask me what I see and help me from there. Never ask me to paste a key or password into this chat.
+You are setting up phone video editing for me, using my Chrome. You do all of the work: every click, every folder, every setting, every key. I only sign in, create accounts when a site asks, and tap Allow when Google asks. I'm not technical.
 
-When a step has a block of text for me to paste somewhere, show it on its own in a code block so I can copy it with one tap.
+HOW TO TALK TO ME
+- One short instruction at a time, then wait. No explanations unless I ask.
+- Be patient. If I'm slow or confused, repeat the instruction more simply.
+- When you need me, say exactly what to do: "Sign in to Google in this tab, then say done."
+- If a page looks different from what you expect, look around and figure it out yourself before asking me.
+- If you are not allowed to type a key or token into a field, copy it, click into the field, and tell me: "Press Cmd+V, then say done." (Ctrl+V on Windows.)
+- Never read a key or password out to me in the chat.
 
-STEP 1. Google Drive folders (Google Drive app).
-Tap +, then Folder, and make 2 folders named exactly: Video Inbox  and  Video Edits
-Then upload a short test video into Video Inbox (+, Upload, pick it from Photos). For long videos, keep the Drive app open on wifi until the upload finishes.
+PART 1. GOOGLE DRIVE
+1. Open drive.google.com. If I'm not signed in, ask me to sign in with the Google account I want my videos in.
+2. Create 2 folders at the top of My Drive, named exactly: Video Inbox  and  Video Edits
+3. Check the storage shown in Drive and tell me in 1 line how much is free.
 
-STEP 2. A key for the words (Safari).
-Go to https://elevenlabs.io and sign up. In the profile menu, open API keys, create a key and copy it. It is a password: it goes only into step 3.
+PART 2. ELEVENLABS (turns speech into words for captions and cuts)
+1. Open https://elevenlabs.io and ask me to sign up or sign in.
+2. Find the API keys page, create a key named video-studio with access to speech to text, and keep it on screen or copied for Part 3.
 
-STEP 3. The video workspace (Safari, not the app: the app does not have these settings).
-Go to https://claude.ai/code and sign in. If it asks to connect GitHub, help me make a free GitHub account and connect it.
-Above the message box, tap the cloud icon with the environment's name, add a new environment and name it Video. Then fill in 3 things and save:
-
-3a. Network access: choose Custom, keep the default list on, and put these in Allowed domains:
-api.elevenlabs.io
-api.deepgram.com
-
-3b. Environment variables (replace paste-your-key-here with my ElevenLabs key; if the screen wants a name and a value separately, the name is the part before the =):
-ELEVENLABS_API_KEY=paste-your-key-here
-BASH_DEFAULT_TIMEOUT_MS=600000
-
-3c. Setup script:
+PART 3. CLAUDE'S CLOUD WORKSPACE
+1. Open https://claude.ai/code. If it asks me to sign in, or to connect GitHub, ask me to do that (I may need to create a free GitHub account; walk me through it).
+2. Open the environment selector (the cloud icon with the environment's name, above the message box) and create a new environment named Video with:
+   - Network access: Custom, default list kept on, and these allowed domains:
+     api.elevenlabs.io
+     api.deepgram.com
+   - Environment variables:
+     BASH_DEFAULT_TIMEOUT_MS=600000
+     ELEVENLABS_API_KEY=<the key from Part 2>
+   - Setup script, exactly this:
 #!/usr/bin/env bash
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
@@ -32,17 +37,28 @@ $SUDO apt-get install -y -qq --no-install-recommends fonts-inter >/dev/null 2>&1
 ffmpeg -version | head -1
 rclone version | head -1
 echo "setup done"
+3. Save it.
 
-STEP 4. Connect my Drive (Claude app, Code tab).
-Start a new session using the Video environment and this repository:
-https://github.com/amplify-legal/video-studio
-Send this as the first message there:
-Set me up. Read CLAUDE.md, connect my Google Drive step by step, then run the self-test and tell me if it passed. I'm not technical, so keep it simple.
-That session will send me a Google link: I open it, pick the account with my videos and tap Allow. The next page shows an error saying it can't connect, which is expected: I copy the whole address from the top of that page and paste it back into that session. It then gives me a long block to save in the Video environment on https://claude.ai/code, which lets future sessions see my Drive. Setup is finished when it says the self-test passed.
+PART 4. CONNECT MY DRIVE TO THE WORKSPACE
+1. On https://claude.ai/code, start a new session with the Video environment on this repository: https://github.com/amplify-legal/video-studio
+2. Send it: Connect my Google Drive. Run python3 tools/vidkit.py connect and give me the Google link.
+3. Open the Google link it gives in a new tab. Ask me to pick the same Google account as Part 1 and tap Allow.
+4. The next page fails to load (its address starts with http://127.0.0.1:53682/). That is expected. Copy that whole address from the tab and send it to the session with: Finish connecting with this address: <address>
+5. The session prints a long block starting {"access_token". Edit the Video environment and add 3 environment variables:
+   RCLONE_CONFIG_GDRIVE_TYPE=drive
+   RCLONE_CONFIG_GDRIVE_SCOPE=drive
+   RCLONE_CONFIG_GDRIVE_TOKEN=<that whole block, braces included>
+   Save.
+6. In the same session send: Run python3 tools/vidkit.py mount, then find, then selftest, and tell me the last line of each. Setup works when the self-test says SELFTEST PASSED. If anything fails, read the session's answer and fix it with the session before moving on.
 
-STEP 5. Every video after that.
-Upload the video into Video Inbox. In the Claude app, Code tab, start a session with the Video environment and the same repository, and say something like:
-Edit my newest video. It's for Instagram, keep it under a minute.
-Short labelled samples show up in Video Edits; I watch them in the Drive app and answer with the letters, like "B and D, captions a bit smaller". The finished video lands in Video Edits. Nothing is ever posted for me. If it says it paused on a big video, I reply "carry on".
+PART 5. MY PHONE
+1. Tell me to install the Claude app and the Google Drive app on my phone, and to sign in to both with the same accounts as above. Wait until I say done.
+2. Tell me: in the Drive app, open Video Inbox, tap +, Upload, and pick any video from my Photos, any length. Keep the Drive app open until the upload finishes. Wait for done.
 
-Start with step 1 now.
+PART 6. TEST IT TOGETHER
+1. Tell me: in the Claude app on the phone, open the Code tab, start a new session with the Video environment and the video-studio repository, and send: Edit my newest video.
+2. Watch that session on https://claude.ai/code in Chrome while it works. Tell me in 1 line what's happening only when something changes. If it pauses on a big video, tell me to reply "carry on".
+3. When it says samples are ready, tell me to open Video Edits in the Drive app and watch them, then answer in the Claude app with the letters I like.
+4. When the finished video is in Video Edits, tell me to watch it. Then tell me, in 3 short lines, how to do this myself next time: upload to Video Inbox, open the Code tab with Video and video-studio, say what the video is for.
+
+Start with Part 1 now.
