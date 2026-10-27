@@ -1213,6 +1213,7 @@ def cmd_selftest(a) -> None:
     whole chain on it with no network. Proves the machine, not the taste."""
     need("ffmpeg")
     J = job_dir(a.job or os.path.join(os.environ.get("TMPDIR", "/tmp"), "vidkit-selftest"))
+    a.job = str(J)  # probe, proxy, samples and render read the job folder from a.job
     size = "3840x2160" if a.uhd else "1920x1080"
     secs = max(12, a.seconds)
     src = J / "fake-phone.mov"
